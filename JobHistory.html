@@ -1,0 +1,449 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Job and education history</title>
+    <style>
+        .spinner {
+            width: 60px;
+        }
+
+        .createButton {
+            background-color: lightgreen;
+        }
+
+        .job {
+            background-color: darkseagreen;
+        }
+
+        .title {
+            background-color: lightsalmon;
+        }
+
+        .promotion {
+            background-color: lightblue;
+        }
+    </style>
+</head>
+<body>
+
+    <table>
+        <tr>
+            <td><label>Timeline from </label></td>
+            <td><input class="spinner" id="from" type="number" value="2010" onchange="createBaseLine()"/></td>
+            <td><label>to</label></td>
+            <td><input class="spinner" id="to" type="number" value="2017" onchange="createBaseLine()" /></td>
+        </tr>
+        <tr>
+            <td><label>Timeline color:</label></td>
+            <td><input type="color" id="color" onchange="createBaseLine()" /></td>
+            <td><label>Timeline Thickness:</label></td>
+            <td><input class="spinner" type="number" id="timelineWidth" value="5" onchange="createBaseLine()" /></td>
+        </tr>
+        <tr>
+            <td><label>Position of month lines:</label></td>
+            <td>
+                <select id="monthPosition" onchange="createBaseLine()">
+                    <option value="1">Up</option>
+                    <option value="2">Middle</option>
+                    <option value="3">Down</option>
+                </select>
+            </td>
+            <td><label>Height of month lines</label></td>
+            <td><input class="spinner" id="monthHeight" type="number" min="1" value="9" onchange="createBaseLine()" /></td>
+        </tr>
+        <tr>
+            <td><label>Space between month lines</label></td>
+            <td><input class="spinner" id="monthSpace" type="number" min="1" value="5" onchange="createBaseLine()"/></td>
+            <td><label>Thickness of month lines</label></td>
+            <td><input class="spinner" id="monthWidth" type="number" min="1" value="2" onchange="createBaseLine()" /></td>
+        </tr>
+        <tr>
+            <td><label>Height of year lines</label></td>
+            <td><input class="spinner" id="yearHeight" type="number" min="1" value="15" onchange="createBaseLine()" /></td>
+            <td><label>Thickness of year lines</label></td>
+            <td><input class="spinner" id="yearWidth" type="number" min="1" value="3" onchange="createBaseLine()" /></td>
+        </tr>
+
+        <tr>
+            <td><label>Job image</label></td>
+            <td><input type="file" id="imgJob" onchange="createBaseLine()"/></td>
+            <td><label>Title image</label></td>
+            <td><input type="file" id="imgTitle" onchange="createBaseLine()" /></td>
+        </tr>
+        
+        <tr>
+            <td><label>Promotion image</label></td>
+            <td><input type="file" id="imgPromotion" onchange="createBaseLine()"/></td>
+            <td></td>
+            <td><input class="createButton" type="button" id="testBtn" value="Create timeline" onclick="createBaseLine()" /></td>
+        </tr>
+    </table>
+
+
+    <input class="job" type="button" value="Add job" onclick="addJob()" />
+    <input class="title" type="button" value="Add title" onclick="addEducation()" />
+    <input class="promotion" type="button" value="Add promotion" onclick="addPromotion()" />
+
+    <table>
+        <tr>
+            <td>
+                <div id="jobs"></div>
+            </td>
+            <td>
+                <div id="titles"></div>
+            </td>
+            <td>
+                <div id="promotions"></div>
+            </td>
+        </tr>
+    </table>
+
+    <br />
+    <div id="timeline"></div>
+</body>
+</html>
+
+<script>
+
+    var x0 = 50, y = 150;
+    var H;
+    var titleIdGen = 0;
+    var jobIdGen = 0;
+    var promotionIdGen = 0;
+
+    var SVG = {
+        createCanvas: function (width, height, containerId)
+        {
+            var container = document.getElementById(containerId);
+            var canvas = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            canvas.setAttribute('width', width);
+            canvas.setAttribute('height', height);
+            canvas.setAttribute('id', 'svgCanvas');
+            container.appendChild(canvas);
+            return canvas;
+        },
+        createLine: function (x1, y1, x2, y2, color, w)
+        {
+            var aLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            aLine.setAttribute('x1', x1);
+            aLine.setAttribute('y1', y1);
+            aLine.setAttribute('x2', x2);
+            aLine.setAttribute('y2', y2);
+            aLine.setAttribute('stroke', color);
+            aLine.setAttribute('stroke-width', w);
+            return aLine;
+        },
+        createText: function (t, x, y, s)
+        {
+            var textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textElement.setAttribute('x', x);
+            textElement.setAttribute('y', y);
+            textElement.setAttribute('font-size', s);
+            textElement.setAttribute('font-family', 'Verdana');
+            textElement.innerHTML = t;
+            return textElement;
+        }
+    };
+
+    function createBaseLine()
+    {
+        var mainContainer = document.getElementById('timeline');
+        while (mainContainer.hasChildNodes()) {
+            mainContainer.removeChild(mainContainer.lastChild);
+        }
+        var from = document.getElementById('from').value;
+        var to = document.getElementById('to').value;
+
+        if (isNaN(from) || isNaN(to)) return;
+
+        var years = to - from;
+
+        if (years <= 0) return;
+
+        var monthSpacing = parseInt(document.getElementById('monthSpace').value);
+
+        if (isNaN(monthSpacing)) return;
+
+        var w = years * monthSpacing * 12 + 100;
+
+        var container = SVG.createCanvas(w, 500, 'timeline');
+
+        var baseLineWidth = years * monthSpacing * 12;
+
+        var baseLineColor = document.getElementById('color').value;
+
+        var tw = parseInt(document.getElementById('timelineWidth').value);
+        var baseLine = SVG.createLine(x0 - 2, y, x0 + baseLineWidth + 2, y, baseLineColor, tw);
+
+        container.appendChild(baseLine);
+        var textWidth = getTextWidth('9', 'Verdana');
+        var dx = 0;
+        var ylh = parseInt(document.getElementById('yearHeight').value); //year line height
+        var currYear = from;
+        var yearLineWidth = parseInt(document.getElementById('yearWidth').value);
+        for (var i = 0; i <= years; i++) {
+            var yearLine = SVG.createLine(x0 + dx, y, x0 + dx, y + ylh, baseLineColor, yearLineWidth);
+            container.appendChild(yearLine);
+            var yearLabel = SVG.createText(currYear, x0 + dx - textWidth * 2.5, y + ylh + 10, 12);
+
+            container.appendChild(yearLabel);
+            dx += monthSpacing * 12;
+            currYear++;
+        }
+
+        var mlh = parseInt(document.getElementById('monthHeight').value);
+        if (isNaN(mlh)) return;
+        dx = 0;
+        var monthLineWidth = parseInt(document.getElementById('monthWidth').value);
+
+        var monthPos = document.getElementById('monthPosition').value;
+        var yt = y - mlh;
+
+        for (var j = 1; j < monthPos; j++) {
+            yt += mlh / 2;
+        }
+
+        for (var i = 0; i <= years * 12 ; i++) {
+            var monthLine = SVG.createLine(x0 + dx, yt, x0 + dx, yt + mlh, baseLineColor, monthLineWidth);
+            container.appendChild(monthLine);
+            dx += monthSpacing;
+        }
+
+        fillEvents('titles', 'imgTitle', 'diploma.svg');
+        fillEvents('jobs', 'imgJob', 'man.svg');
+        fillEvents('promotions', 'imgPromotion', 'promotion.svg');
+        addLegend();
+    }
+
+    function getTextWidth(text, font)
+    {
+        // re-use canvas object for better performance
+        var canvas = getTextWidth.canvas || (getTextWidth.canvas = document.createElement("canvas"));
+        var context = canvas.getContext("2d");
+        context.font = font;
+        var metrics = context.measureText(text);
+        return metrics.width;
+    }
+
+    function addJob()
+    {
+        var jobContainer = document.getElementById('jobs');
+        var i = document.createElement('input');
+        i.setAttribute('placeholder', 'Job year');
+        i.setAttribute('type', 'number');
+        i.setAttribute('class', 'job');
+        i.setAttribute('onchange', 'createBaseLine()');
+
+        var i2 = document.createElement('input');
+        i2.setAttribute('placeholder', 'Job month');
+        i2.setAttribute('min', 1);
+        i2.setAttribute('max', 12);
+        i2.setAttribute('type', 'number');
+        i2.setAttribute('class', 'job');
+        i2.setAttribute('onchange', 'createBaseLine()');
+
+        var id = 'title' + titleIdGen++;
+        var x = document.createElement('input');
+        x.setAttribute('type', 'button');
+        x.setAttribute('onclick', 'removeElement("jobs","' + id + '")');
+        x.setAttribute('value', 'remove');
+
+        var d = document.createElement('div');
+        d.setAttribute('name', 'job');
+        d.setAttribute('id', id);
+        d.appendChild(i);
+        d.appendChild(i2);
+        d.appendChild(x);
+        jobContainer.appendChild(d);
+
+    }
+
+    function addEducation()
+    {
+        var titlesContainer = document.getElementById('titles');
+        var i = document.createElement('input');
+        i.setAttribute('placeholder', 'Title year');
+        i.setAttribute('type', 'number');
+        i.setAttribute('class', 'title');
+        i.setAttribute('onchange', 'createBaseLine()');
+
+        var i2 = document.createElement('input');
+        i2.setAttribute('placeholder', 'Title month');
+        i2.setAttribute('min', 1);
+        i2.setAttribute('max', 12);
+        i2.setAttribute('type', 'number');
+        i2.setAttribute('class', 'title');
+        i2.setAttribute('onchange', 'createBaseLine()');
+
+        var id = 'title' + titleIdGen++;
+        var x = document.createElement('input');
+        x.setAttribute('type', 'button');
+        x.setAttribute('onclick', 'removeElement("titles","' + id + '")');
+        x.setAttribute('value', 'remove');
+
+        var d = document.createElement('div');
+        d.setAttribute('name', 'job');
+        d.setAttribute('id', id);
+        d.appendChild(i);
+        d.appendChild(i2);
+        d.appendChild(x);
+
+        titlesContainer.appendChild(d);
+    }
+
+    function addPromotion()
+    {
+        var promotionContainer = document.getElementById('promotions');
+        var i = document.createElement('input');
+        i.setAttribute('placeholder', 'Promotion year');
+        i.setAttribute('type', 'number');
+        i.setAttribute('class', 'promotion');
+        i.setAttribute('onchange', 'createBaseLine()');
+
+        var i2 = document.createElement('input');
+        i2.setAttribute('placeholder', 'promotion month');
+        i2.setAttribute('min', 1);
+        i2.setAttribute('max', 12);
+        i2.setAttribute('type', 'number');
+        i2.setAttribute('class', 'promotion');
+        i2.setAttribute('onchange', 'createBaseLine()');
+
+        var id = 'promotion' + promotionIdGen++;
+        var x = document.createElement('input');
+        x.setAttribute('type', 'button');
+        x.setAttribute('onclick', 'removeElement("promotions","' + id + '")');
+        x.setAttribute('value', 'remove');
+
+        var d = document.createElement('div');
+        d.setAttribute('name', 'promotion');
+        d.setAttribute('id', id);
+        d.appendChild(i);
+        d.appendChild(i2);
+        d.appendChild(x);
+        promotionContainer.appendChild(d);
+
+    }
+
+    function removeElement(parentId, elementId)
+    {
+        document.getElementById(parentId).removeChild(document.getElementById(elementId));
+    }
+
+    function addLegend() {
+        var svgCanvas = document.getElementById('svgCanvas');
+
+        var svgimg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        svgimg.setAttributeNS(null, 'height', 32);
+        svgimg.setAttributeNS(null, 'width', 32);
+        svgimg.setAttributeNS('http://www.w3.org/1999/xlink', 'href', 'imgs/man.svg');
+        svgimg.setAttributeNS(null, 'x', 50);
+        svgimg.setAttributeNS(null, 'y', y+50);
+        svgimg.setAttributeNS(null, 'visibility', 'visible');
+        svgCanvas.appendChild(svgimg);
+
+        var jobLabel = SVG.createText('Started job', 80, y + 70, 12);
+        svgCanvas.appendChild(jobLabel);
+
+
+
+        var svgPromo = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        svgPromo.setAttributeNS(null, 'height', 32);
+        svgPromo.setAttributeNS(null, 'width', 32);
+        svgPromo.setAttributeNS('http://www.w3.org/1999/xlink', 'href', 'imgs/promotion.svg');
+        svgPromo.setAttributeNS(null, 'x', 150);
+        svgPromo.setAttributeNS(null, 'y', y+50);
+        svgPromo.setAttributeNS(null, 'visibility', 'visible');
+        svgCanvas.appendChild(svgPromo);
+
+        var promoLabel = SVG.createText('Promotion', 180, y+70, 12);
+        svgCanvas.appendChild(promoLabel);
+
+        
+        var svgTitle = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        svgTitle.setAttributeNS(null, 'height', 32);
+        svgTitle.setAttributeNS(null, 'width', 32);
+        svgTitle.setAttributeNS('http://www.w3.org/1999/xlink', 'href', 'imgs/diploma.svg');
+        svgTitle.setAttributeNS(null, 'x', 250);
+        svgTitle.setAttributeNS(null, 'y', y + 50);
+        svgTitle.setAttributeNS(null, 'visibility', 'visible');
+        svgCanvas.appendChild(svgTitle);
+
+        var titleLabel = SVG.createText('Title', 285, y + 70, 12);
+        svgCanvas.appendChild(titleLabel);
+    }
+
+    function fillEvents(containerId, inputId, imgName)
+    {
+        var titles = document.querySelectorAll('#' + containerId + ' div');
+
+        for (var i = 0; i < titles.length; i++) {
+            var inputs = titles[i].querySelectorAll('input');
+            var year = inputs[0].value;
+            var month = inputs[1].value;
+            var from = document.getElementById('from').value;
+
+            var imgW = 32;
+            var imgH = 32;
+            var monthSpacing = parseInt(document.getElementById('monthSpace').value);
+
+            if (isNaN(year) || isNaN(month) || isNaN(from) || isNaN(monthSpacing)) return;
+
+            var x = x0 + ((year - from) * monthSpacing * 12) + (monthSpacing * (month - 1)) - imgW / 2;
+
+            var mlh = document.getElementById('monthHeight').value;
+            if (isNaN(mlh)) return;
+            var monthPos = document.getElementById('monthPosition').value;
+            var dy = 0;
+            if (monthPos == 1)
+                dy = mlh;
+            else if (monthPos == 2)
+                dy = mlh / 2;
+
+            var yi = y - dy - 4 - imgW;
+
+            var svgCanvas = document.getElementById('svgCanvas');
+
+            if (!svgCanvas) return;
+
+            var input = document.getElementById(inputId);
+
+            //check intersections
+            var r = svgCanvas.createSVGRect();
+            r.x = x;
+            r.y = yi;
+            r.width = r.height = 32;
+            var intersections = svgCanvas.getIntersectionList(r, null);
+            var yt = yi;
+            var threshold = 10;
+            var tt = 0;
+            while (intersections.length) {
+                console.log(intersections);
+                yt = yt - 32 - 5;
+
+                r.y = yt;
+                intersections = svgCanvas.getIntersectionList(r, null);
+                tt++;
+                if (tt > threshold) break;
+            }
+           
+         //   if (input && input.files[0]) {
+                var svgimg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                svgimg.setAttributeNS(null, 'height', imgH);
+                svgimg.setAttributeNS(null, 'width', imgW);
+                svgimg.setAttributeNS('http://www.w3.org/1999/xlink', 'href', 'imgs/' + imgName);
+                svgimg.setAttributeNS(null, 'x', x);
+                svgimg.setAttributeNS(null, 'y', yt);
+                svgimg.setAttributeNS(null, 'visibility', 'visible');
+                svgCanvas.appendChild(svgimg);
+          //  }
+
+
+        }
+
+
+    }
+
+
+</script>
